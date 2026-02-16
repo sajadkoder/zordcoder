@@ -22,7 +22,7 @@ from typing import Optional, List, Dict, Any, Callable
 from datetime import datetime
 
 # Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
     from rich.console import Console
