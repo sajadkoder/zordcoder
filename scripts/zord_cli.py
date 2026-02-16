@@ -39,6 +39,19 @@ try:
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
+    Theme = None
+    Console = None
+    Panel = None
+    Text = None
+    Syntax = None
+    Markdown = None
+    Table = None
+    Live = None
+    Progress = None
+    SpinnerColumn = None
+    TextColumn = None
+    Style = None
+    box = None
     print("Warning: rich not installed. Install with: pip install rich")
 
 try:
@@ -52,20 +65,23 @@ except ImportError:
 # Custom Theme
 #===============================================================================
 
-ZORD_THEME = Theme({
-    "banner.cyan": "bold cyan",
-    "banner.green": "bold green",
-    "banner.yellow": "bold yellow",
-    "user": "bold blue",
-    "assistant": "bold green",
-    "system": "bold yellow",
-    "error": "bold red",
-    "warning": "bold yellow",
-    "info": "blue",
-    "code": "cyan",
-    "reasoning": "dim cyan italic",
-    "metrics": "dim",
-})
+if Theme:
+    ZORD_THEME = Theme({
+        "banner.cyan": "bold cyan",
+        "banner.green": "bold green",
+        "banner.yellow": "bold yellow",
+        "user": "bold blue",
+        "assistant": "bold green",
+        "system": "bold yellow",
+        "error": "bold red",
+        "warning": "bold yellow",
+        "info": "blue",
+        "code": "cyan",
+        "reasoning": "dim cyan italic",
+        "metrics": "dim",
+    })
+else:
+    ZORD_THEME = None
 
 
 #===============================================================================
@@ -98,12 +114,19 @@ class ZordConsole:
     """Wrapper for rich console with custom styling"""
     
     def __init__(self):
-        self.console = Console(theme=ZORD_THEME) if RICH_AVAILABLE else None
-        self.use_rich = RICH_AVAILABLE
+        try:
+            self.console = Console(theme=ZORD_THEME) if (RICH_AVAILABLE and ZORD_THEME) else None
+            self.use_rich = self.console is not None
+        except:
+            self.console = None
+            self.use_rich = False
         
     def print(self, message: str, style: str = ""):
-        if self.use_rich:
-            self.console.print(message)
+        if self.use_rich and self.console:
+            try:
+                self.console.print(message)
+            except:
+                print(message)
         else:
             # Strip rich markup for plain output
             import re
@@ -115,44 +138,72 @@ class ZordConsole:
         self.print(banner)
         
     def print_panel(self, content: str, title: str = "", style: str = ""):
-        if self.use_rich:
-            self.console.print(Panel(content, title=title, style=style, box=box.ROUNDED))
+        if self.use_rich and self.console and Panel:
+            try:
+                self.console.print(Panel(content, title=title, style=style, box=box.ROUNDED if box else None))
+            except:
+                print(f"=== {title} ===")
+                print(content)
         else:
             print(f"=== {title} ===")
             print(content)
             
     def print_table(self, data: List[List[str]], headers: List[str] = None):
-        if self.use_rich:
-            table = Table(show_header=bool(headers), headers=headers, box=box.SIMPLE)
-            for row in data:
-                table.add_row(*row)
-            self.console.print(table)
+        if self.use_rich and self.console and Table:
+            try:
+                table = Table(show_header=bool(headers), headers=headers, box=box.SIMPLE if box else None)
+                for row in data:
+                    table.add_row(*row)
+                self.console.print(table)
+            except:
+                self._print_table_plain(data, headers)
+        else:
+            self._print_table_plain(data, headers)
+    
+    def _print_table_plain(self, data, headers):
+        if headers:
+            print(" | ".join(headers))
+            print("-" * 40)
+        for row in data:
+            print(" | ".join(row))
         else:
             for row in data:
                 print(" | ".join(row))
                 
     def print_code(self, code: str, language: str = "python"):
-        if self.use_rich:
-            syntax = Syntax(code, language, theme="monokai", line_numbers=True)
-            self.console.print(syntax)
+        if self.use_rich and Syntax:
+            try:
+                syntax = Syntax(code, language, theme="monokai", line_numbers=True)
+                self.console.print(syntax)
+            except:
+                print(code)
         else:
             print(code)
             
     def print_markdown(self, md: str):
-        if self.use_rich:
-            self.console.print(Markdown(md))
+        if self.use_rich and Markdown:
+            try:
+                self.console.print(Markdown(md))
+            except:
+                print(md)
         else:
             print(md)
             
     def input(self, prompt: str = "> ") -> str:
-        if self.use_rich:
-            return self.console.input(prompt)
+        if self.use_rich and self.console:
+            try:
+                return self.console.input(prompt)
+            except:
+                return input(prompt)
         else:
             return input(prompt)
             
     def clear(self):
-        if self.use_rich:
-            self.console.clear()
+        if self.use_rich and self.console:
+            try:
+                self.console.clear()
+            except:
+                print("\033[2J\033[H", end="")
         else:
             print("\033[2J\033[H", end="")
 
@@ -326,16 +377,19 @@ class ZordCLI:
             
         metrics = self.engine.get_metrics()
         
-        metrics_table = Table(title="📊 Performance Metrics", box=box.ROUNDED)
-        metrics_table.add_column("Metric", style="cyan")
-        metrics_table.add_column("Value", style="green")
-        
-        metrics_table.add_row("Total Requests", str(metrics["total_requests"]))
-        metrics_table.add_row("Total Tokens", str(metrics["total_tokens_generated"]))
-        metrics_table.add_row("Avg Tokens/sec", f"{metrics['avg_tokens_per_second']:.2f}")
-        metrics_table.add_row("Avg Response Time", f"{metrics['avg_response_time']:.2f}s")
-        
-        self.console.console.print(metrics_table)
+        if self.console.use_rich:
+            metrics_table = Table(title="📊 Performance Metrics", box=box.ROUNDED if box else None)
+            metrics_table.add_column("Metric", style="cyan")
+            metrics_table.add_column("Value", style="green")
+            
+            metrics_table.add_row("Total Requests", str(metrics["total_requests"]))
+            metrics_table.add_row("Total Tokens", str(metrics["total_tokens_generated"]))
+            metrics_table.add_row("Avg Tokens/sec", f"{metrics['avg_tokens_per_second']:.2f}")
+            metrics_table.add_row("Avg Response Time", f"{metrics['avg_response_time']:.2f}s")
+            
+            self.console.console.print(metrics_table)
+        else:
+            self._print_table_plain([["Total Requests", str(metrics["total_requests"])], ["Total Tokens", str(metrics["total_tokens_generated"])]], ["Metric", "Value"])
         
     def show_info(self):
         """Show model information"""
@@ -347,17 +401,24 @@ class ZordCLI:
         if not info.get("loaded"):
             self.console.print("[error]No model loaded[/error]")
             return
+        
+        if self.console.use_rich:
+            info_table = Table(title="ℹ️ Model Information", box=box.ROUNDED if box else None)
+            info_table.add_column("Property", style="cyan")
+            info_table.add_column("Value", style="green")
             
-        info_table = Table(title="ℹ️ Model Information", box=box.ROUNDED)
-        info_table.add_column("Property", style="cyan")
-        info_table.add_column("Value", style="green")
-        
-        info_table.add_row("Status", "✓ Loaded")
-        info_table.add_row("Model", os.path.basename(info.get("model_path", "N/A")))
-        info_table.add_row("Context Length", str(info.get("n_ctx", "N/A")))
-        info_table.add_row("Threads", str(info.get("n_threads", "N/A")))
-        
-        self.console.console.print(info_table)
+            info_table.add_row("Status", "✓ Loaded")
+            info_table.add_row("Model", os.path.basename(info.get("model_path", "N/A")))
+            info_table.add_row("Context Length", str(info.get("n_ctx", "N/A")))
+            info_table.add_row("Threads", str(info.get("n_threads", "N/A")))
+            
+            self.console.console.print(info_table)
+        else:
+            self.console.print("\n=== Model Information ===")
+            self.console.print(f"Status: Loaded")
+            self.console.print(f"Model: {os.path.basename(info.get('model_path', 'N/A'))}")
+            self.console.print(f"Context Length: {info.get('n_ctx', 'N/A')}")
+            self.console.print(f"Threads: {info.get('n_threads', 'N/A')}")
         
     def handle_command(self, user_input: str) -> bool:
         """
@@ -475,19 +536,28 @@ class ZordCLI:
         parts = re.split(r'(```[\w]*\n[\s\S]*?```)', response)
         
         for part in parts:
-            if part.startswith('```'):
-                # Code block
-                match = re.match(r'```(\w+)?\n([\s\S]*?)```', part)
-                if match:
-                    code_lang = match.group(1) or language or "python"
-                    code = match.group(2).rstrip()
-                    self.console.console.print("\n")
-                    self.console.print_code(code, code_lang)
-                    self.console.console.print("\n")
-            else:
-                # Regular text
-                if part.strip():
-                    self.console.console.print(part, end="")
+                if part.startswith('```'):
+                    # Code block
+                    match = re.match(r'```(\w+)?\n([\s\S]*?)```', part)
+                    if match:
+                        code_lang = match.group(1) or language or "python"
+                        code = match.group(2).rstrip()
+                        if self.console.use_rich:
+                            self.console.console.print("\n")
+                        else:
+                            print()
+                        self.console.print_code(code, code_lang)
+                        if self.console.use_rich:
+                            self.console.console.print("\n")
+                        else:
+                            print()
+                else:
+                    # Regular text
+                    if part.strip():
+                        if self.console.use_rich:
+                            self.console.console.print(part, end="")
+                        else:
+                            print(part, end="")
                     
         print()  # Newline after response
         
@@ -532,7 +602,11 @@ class ZordCLI:
                     
                 # Show thinking indicator
                 if not self.streaming:
-                    with self.console.console.status("[bold green]Zord is thinking...[/bold green]"):
+                    if self.console.use_rich:
+                        with self.console.console.status("[bold green]Zord is thinking...[/bold green]"):
+                            response, metrics = self.engine.generate_response(user_input, gen_config)
+                    else:
+                        print("Zord is thinking...")
                         response, metrics = self.engine.generate_response(user_input, gen_config)
                     self.console.print("\n")
                     self.console.print("[bold green]Zord:[/bold green]")
@@ -556,8 +630,10 @@ class ZordCLI:
                     metrics = self.engine.get_metrics()
                     
                 # Show quick metrics
-                if RICH_AVAILABLE:
+                if self.console.use_rich:
                     self.console.console.print(f"\n[dim]⏱ {metrics.get('generation_time', 0):.1f}s | 💬 {metrics.get('tokens_generated', 0)} tokens | ⚡ {metrics.get('tokens_per_second', 0):.1f} tok/s[/dim]")
+                else:
+                    print(f"\n⏱ {metrics.get('generation_time', 0):.1f}s | 💬 {metrics.get('tokens_generated', 0)} tokens | ⚡ {metrics.get('tokens_per_second', 0):.1f} tok/s")
                     
             except KeyboardInterrupt:
                 self.console.print("\n[yellow]Use 'exit' to quit[/yellow]")
