@@ -1,0 +1,54 @@
+# Zord Coder v1 - MergeKit Configuration
+# Merges DeepSeek-Coder, Qwen2.5-Coder, and ChatGLM into ZordCoder-v1
+
+models:
+  # Primary Base: DeepSeek-Coder (60% weight)
+  - model: deepseek-ai/deepseek-coder-1.3b-instruct
+    parameters:
+      weight: 0.60
+      density: 0.75
+      # DeepSeek-specific: preserve code infilling capabilities
+
+  # Secondary: Qwen2.5-Coder (25% weight)
+  - model: Qwen/Qwen2.5-1.5B-Instruct
+    parameters:
+      weight: 0.25
+      density: 0.60
+      # Qwen: enhanced instruction following
+
+  # Tertiary: ChatGLM (15% weight)
+  - model: THUDM/chatglm3-6b-base
+    parameters:
+      weight: 0.15
+      density: 0.40
+      # GLM: bilingual support, blank infilling
+
+# Merge Method: TIES-DARE Hybrid
+# TIES (Task Interference Elimination) + DARE (Data-Aware Reward Estimation)
+merge_method: dare_ties
+
+# Base model (frozen reference)
+base_model: deepseek-ai/deepseek-coder-1.3b-instruct
+
+# Parameters
+parameters:
+  # DARE parameters
+  random_ratio: 0.3
+  use_era: false
+  
+  # TIES parameters
+  int8_mask: true
+  normalize: true
+  
+  # General
+  dtype: bfloat16
+  device: cuda
+  verbose: true
+
+# Output
+out_path: ./zordcoder-v1-merged
+
+# Tokenizer
+tokenizer:
+  model: deepseek-ai/deepseek-coder-1.3b-instruct
+  # Use DeepSeek tokenizer as base (compatible with most)
