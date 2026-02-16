@@ -20,39 +20,18 @@
 
 ## Quick Start
 
-### 1. Clone the Repository
+### 1. Clone & Run
 
 ```bash
 git clone https://github.com/sajadkoder/zordcoder.git
 cd zordcoder
+pip install -r requirements.txt
+python scripts/zord_cli.py --interactive
 ```
 
-### 2. Download a Model
+The model will download automatically on first run!
 
-Download a GGUF model (recommended: Q4_K_M quantization):
-
-```bash
-# Create models directory
-mkdir -p models
-
-# Download DeepSeek-Coder-1.3B (recommended)
-# From: https://huggingface.co/TheBloke/deepseek-coder-1.3b-instruct-GGUF
-# Or use huggingface-cli:
-huggingface-cli download TheBloke/deepseek-coder-1.3b-instruct-GGUF \
-    deepseek-coder-1.3b-instruct-q4_k_m.gguf \
-    --local-dir ./models
-```
-
-### 3. Run the CLI
-
-```bash
-# Using Python directly
-python3 scripts/zord_cli.py
-
-# Or install and use
-pip install -e .
-zord
-```
+> **Note:** First run will download the model (~833MB) automatically from HuggingFace.
 
 ## Installation (Termux)
 

@@ -231,13 +231,31 @@ class ZordCLI:
         # Create engine
         self.engine = ZordCore(self.config)
         
+        # Check/download model first
+        self.console.print("\n[info]Checking for model...[/info]")
+        
+        # Try to download model if not exists
+        if not os.path.exists(self.config.model_path):
+            self.console.print("[info]Model not found. Downloading...[/info]")
+            try:
+                from scripts.download_model import check_and_download
+                model_path = check_and_download()
+                if model_path:
+                    self.config.model_path = model_path
+                else:
+                    self.console.print("[error]Failed to download model[/error]")
+                    return False
+            except Exception as e:
+                self.console.print(f"[error]Auto-download failed: {e}[/error]")
+                self.console.print("[info]Please place GGUF model in:[/info]")
+                self.console.print(f"  {self.config.model_path}")
+                return False
+        
         # Load model
         self.console.print("\n[info]Loading model...[/info]")
         
         if not self.engine.load_model():
             self.console.print(f"\n[error]Failed to load model: {self.config.model_path}[/error]")
-            self.console.print("\n[info]Please download a GGUF model and place it in:[/info]")
-            self.console.print(f"  {self.config.model_path}")
             return False
             
         return True
