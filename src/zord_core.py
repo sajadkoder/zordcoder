@@ -14,7 +14,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, List, Callable, Generator, Any, Tuple
+from typing import Optional, Dict, List, Callable, Generator, Any, Tuple, Union
 from dataclasses import dataclass, field
 from enum import Enum
 import threading
@@ -105,7 +105,7 @@ class ZordConfig:
     repeat_penalty: float = 1.1
     
     # Paths
-    logs_dir: str = field(default_factory=lambda: os.path.join(os.path.dirname(__file__), "..", "logs"))
+    logs_dir: Union[str, None] = field(default_factory=lambda: os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs"))
 
 
 #===============================================================================
@@ -164,14 +164,24 @@ class ZordCore:
         
     def _setup_logging(self):
         """Setup logging configuration"""
+        # Create logs directory if it doesn't exist
+        if self.config.logs_dir:
+            os.makedirs(self.config.logs_dir, exist_ok=True)
+        
         log_level = getattr(logging, self.config.log_level.upper(), logging.INFO)
+        handlers = [logging.StreamHandler()]
+        
+        # Add file handler if logs_dir is set
+        if self.config.logs_dir:
+            try:
+                handlers.append(logging.FileHandler(os.path.join(self.config.logs_dir, "zord_core.log")))
+            except Exception:
+                pass  # Skip file logging if it fails
+        
         logging.basicConfig(
             level=log_level,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.StreamHandler(),
-                logging.FileHandler(os.path.join(self.config.logs_dir, "zord_core.log"))
-            ] if self.config.logs_dir else []
+            handlers=handlers
         )
         self.logger = logging.getLogger("ZordCore")
         
