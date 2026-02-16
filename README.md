@@ -11,12 +11,12 @@
 
 ## Features
 
-- 🚀 **Blazing Fast** - Optimized GGUF quantization for mobile devices
-- 🌐 **Multi-Language** - Python, JavaScript, TypeScript, C++, Rust, Go, Java, Bash, and more
-- 💬 **Interactive CLI** - Beautiful terminal interface with syntax highlighting
-- 🔄 **Streaming Output** - Real-time token generation
-- 🧠 **Reasoning Mode** - Chain-of-thought like DeepSeek-R1
-- 📱 **Termux Ready** - Optimized for Android devices
+-  **Blazing Fast** - Optimized GGUF quantization for mobile devices
+-  **Multi-Language** - Python, JavaScript, TypeScript, C++, Rust, Go, Java, Bash, and more
+-  **Interactive CLI** - Beautiful terminal interface with syntax highlighting
+-  **Streaming Output** - Real-time token generation
+-  **Reasoning Mode** - Chain-of-thought like DeepSeek-R1
+-  **Termux Ready** - Optimized for Android devices
 
 ## Quick Start
 
@@ -204,5 +204,5 @@ MIT License - See [LICENSE](LICENSE) for details.
 ---
 
 <p align="center">
-  <strong>Built with ❤️ for mobile coding</strong>
+  <strong>Built with ❤️ by sajad</strong>
 </p>
