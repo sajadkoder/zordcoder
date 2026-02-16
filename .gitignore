@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Model files (these are large and should be downloaded separately)
+*.gguf
+*.bin
+*.pt
+*.pth
+*.ckpt
+models/
+
+# Cache
+.cache/
+*.log
+logs/
+
+# Environment
+.env
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Termux
+.termux/
