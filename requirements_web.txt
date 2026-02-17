@@ -1,0 +1,11 @@
+# Zord Coder v1 - Web Dependencies
+# Install with: pip install -r requirements_web.txt
+
+# Web framework
+streamlit>=1.30.0
+
+# For better UI
+streamlit-extras>=0.4.0
+
+# For icons
+streamlit-icon>=0.4.0

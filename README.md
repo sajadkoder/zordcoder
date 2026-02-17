@@ -11,12 +11,15 @@
 
 ## Features
 
--  **Blazing Fast** - Optimized GGUF quantization for mobile devices
--  **Multi-Language** - Python, JavaScript, TypeScript, C++, Rust, Go, Java, Bash, and more
--  **Interactive CLI** - Beautiful terminal interface with syntax highlighting
--  **Streaming Output** - Real-time token generation
--  **Reasoning Mode** - Chain-of-thought like DeepSeek-R1
--  **Termux Ready** - Optimized for Android devices
+- 🚀 **Blazing Fast** - Optimized GGUF quantization for mobile devices
+- 🌐 **Web Interface** - Beautiful Streamlit web UI (self-hosted)
+- 💻 **CLI** - Terminal interface for developers
+- 🌐 **Multi-Language** - Python, JavaScript, TypeScript, C++, Rust, Go, Java, Bash, and more
+- 💬 **Interactive Chat** - Beautiful chat interface with code highlighting
+- 🔄 **Streaming** - Real-time token generation
+- 🧠 **Reasoning Mode** - Chain-of-thought like DeepSeek-R1
+- 📱 **Termux Ready** - Optimized for Android devices
+- 🎨 **x.ai Theme** - Beautiful dark/light themes
 
 ## Quick Start
 
@@ -32,6 +35,46 @@ python scripts/zord_cli.py --interactive
 The model will download automatically on first run!
 
 > **Note:** First run will download the model (~833MB) automatically from HuggingFace.
+
+## Web Interface
+
+### Run Web App
+
+```bash
+# Install web dependencies
+pip install -r requirements_web.txt
+
+# Run the web app
+streamlit run web_app.py
+# or
+python web_app.py
+```
+
+The web app will open at `http://localhost:8501`
+
+### Features
+- 🌐 **Beautiful Web UI** - Modern chat interface
+- 🎨 **x.ai Theme** - Dark/Light mode with green accents
+- 💬 **Chat History** - Persistent conversation
+- ⚡ **Streaming** - Real-time responses
+- ⚙️ **Settings** - Temperature, max tokens, reasoning mode
+- 📊 **Metrics** - Tokens/sec, response time
+
+### Making It Public
+
+To share your Zord Coder with the world:
+
+```bash
+# Option 1: Cloudflare Tunnel (Free)
+pip install cloudflared
+cloudflared tunnel --url http://localhost:8501
+
+# Option 2: ngrok
+pip install ngrok
+ngrok http 8501
+```
+
+Your URL will be something like: `https://your-tunnel.cloudflare.link`
 
 ## Prerequisites
 
@@ -94,22 +137,26 @@ python3 scripts/zord_cli.py "Explain recursion" \
 
 ```
 zordcoder/
+├── .streamlit/
+│   └── config.toml           # Streamlit theme configuration
 ├── config/
-│   └── merge_config.yaml      # Model merging configuration
+│   └── merge_config.yaml    # Model merging configuration
 ├── docs/
-│   ├── MODEL_SELECTION.md     # Model selection strategy
-│   ├── CONVERSION.md         # GGUF conversion guide
-│   └── OPTIMIZATION.md       # Performance optimization
+│   ├── MODEL_SELECTION.md   # Model selection strategy
+│   ├── CONVERSION.md        # GGUF conversion guide
+│   └── OPTIMIZATION.md     # Performance optimization
 ├── scripts/
-│   ├── setup_termux.sh       # Termux installation script
-│   ├── train_zord.py         # nanoGPT training script
-│   ├── download_model.py      # Auto model downloader
-│   └── zord_cli.py           # CLI interface
+│   ├── setup_termux.sh     # Termux installation script
+│   ├── train_zord.py       # nanoGPT training script
+│   ├── download_model.py    # Auto model downloader
+│   └── zord_cli.py        # CLI interface
 ├── src/
-│   └── zord_core.py          # Core inference engine
+│   └── zord_core.py       # Core inference engine
+├── web_app.py              # Streamlit web application
 ├── .gitignore
 ├── README.md
-└── requirements.txt
+├── requirements.txt         # Main dependencies
+└── requirements_web.txt    # Web dependencies
 ```
 
 ## Documentation
