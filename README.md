@@ -33,6 +33,13 @@ The model will download automatically on first run!
 
 > **Note:** First run will download the model (~833MB) automatically from HuggingFace.
 
+## Prerequisites
+
+- Python 3.9+
+- Windows, Linux, or Termux (Android)
+- Internet connection (for first run - model download)
+- 2GB+ free storage space
+
 ## Installation (Termux)
 
 ```bash
@@ -90,12 +97,13 @@ zordcoder/
 ├── config/
 │   └── merge_config.yaml      # Model merging configuration
 ├── docs/
-│   ├── MODEL_SELECTION.md    # Model selection strategy
+│   ├── MODEL_SELECTION.md     # Model selection strategy
 │   ├── CONVERSION.md         # GGUF conversion guide
 │   └── OPTIMIZATION.md       # Performance optimization
 ├── scripts/
 │   ├── setup_termux.sh       # Termux installation script
 │   ├── train_zord.py         # nanoGPT training script
+│   ├── download_model.py      # Auto model downloader
 │   └── zord_cli.py           # CLI interface
 ├── src/
 │   └── zord_core.py          # Core inference engine
