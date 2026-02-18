@@ -1,0 +1,53 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "functions": {
+    "src/app/api/**/*": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/chat",
+      "destination": "${NEXT_PUBLIC_API_URL}/api/chat"
+    },
+    {
+      "source": "/api/health",
+      "destination": "${NEXT_PUBLIC_API_URL}/api/health"
+    },
+    {
+      "source": "/api/models",
+      "destination": "${NEXT_PUBLIC_API_URL}/api/models"
+    },
+    {
+      "source": "/api/stream",
+      "destination": "${NEXT_PUBLIC_API_URL}/api/stream"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Credentials", "value": "true" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version" }
+      ]
+    }
+  ],
+  "env": {
+    NEXT_PUBLIC_API_URL": {
+      "description": "Backend API URL (e.g., https://your-backend.hf.space)",
+      "value": ""
+    },
+    "NEXT_PUBLIC_APP_NAME": {
+      "description": "Application name",
+      "value": "Zord Coder"
+    }
+  }
+}

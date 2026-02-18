@@ -1,0 +1,27 @@
+version: "2"
+authtoken: YOUR_AUTH_TOKEN_HERE
+
+tunnels:
+  local-server:
+    proto: http
+    addr: 8000
+    inspect_metadata: false
+    
+  local-server-https:
+    proto: http
+    addr: 8000
+    bind_tls: true
+    
+  secure-server:
+    proto: http
+    addr: 8000
+    auth: "admin:password123"
+    host_header: localhost
+
+web_addr: 127.0.0.1:4040
+update_check: false
+log_level: info
+log_format: json
+log: /var/log/ngrok.log
+
+region: us

@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: zordcoder-api
+    runtime: docker
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: ZORD_MODEL_PATH
+        value: /app/models/zordcoder-v1-q4_k_m.gguf
+      - key: ZORD_N_CTX
+        value: "2048"
+      - key: ZORD_N_THREADS
+        value: "2"
+    disk:
+      name: model-storage
+      mountPath: /app/models
+      sizeGB: 1
