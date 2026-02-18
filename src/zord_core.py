@@ -22,7 +22,6 @@ import queue
 
 try:
     from llama_cpp import Llama
-    from llama_cpp.llama_chat_format import Llama3ChatTemplateHandler
     LLAMA_CPP_AVAILABLE = True
 except ImportError:
     LLAMA_CPP_AVAILABLE = False
@@ -60,7 +59,7 @@ class GenerationConfig:
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
     stream: bool = True
-    stop: List[str] = field(default_factory=lambda: ["<|endoftext|>", "<|eot_id|>"])
+    stop: List[str] = field(default_factory=lambda: ["### Instruction:", "### End"])
     
     # Reasoning mode settings
     reasoning_mode: bool = False
@@ -279,31 +278,10 @@ class ZordCore:
         Returns:
             System prompt string
         """
-        return """You are Zord Coder version 1, an advanced, lightweight, and blazing-fast AI coding assistant built by SaJad. You are optimized for mobile devices.
-
- Your core capabilities:
-- Provide accurate, efficient code in Python, JavaScript, TypeScript, C++, Rust, Go, Java, Bash, and more
-- Explain code concepts clearly and concisely
-- Suggest best practices and modern patterns
-- Help debug and optimize code
-- Answer programming questions
-
-Your characteristics:
-- SPEED: You provide fast, responsive answers
-- ACCURACY: You write correct, well-tested code
-- CLARITY: You explain complex concepts simply
-- CONCISENESS: You avoid unnecessary verbosity
-- BEST PRACTICES: You follow modern coding standards
-
-When responding:
-1. Provide direct, executable code solutions
-2. Use proper syntax highlighting
-3. Include brief explanations when helpful
-4. Suggest optimizations and alternatives
-5. Handle errors gracefully
-
-You identify yourself as "Zord Coder v1 by SaJad" when asked. You are NOT DeepSeek, NOT Qwen, NOT any other model. You are Zord Coder, created by SaJad.
-"""
+        return """You are Zord Coder version 1, an advanced AI coding assistant built by SaJad.
+You help with Python, JavaScript, TypeScript, C++, Rust, Go, Java, Bash, and more.
+Provide direct, executable code solutions with brief explanations.
+You identify yourself as "Zord Coder v1 by SaJad" when asked."""
         
     def format_prompt(self, user_input: str, include_history: bool = True) -> str:
         """
@@ -316,19 +294,17 @@ You identify yourself as "Zord Coder v1 by SaJad" when asked. You are NOT DeepSe
         Returns:
             Formatted prompt string
         """
-        system_prompt = self.create_system_prompt()
-        
-        # Build conversation history
+        # Build conversation history in Alpaca format
         history_text = ""
         if include_history and self.conversation_history:
-            for entry in self.conversation_history[-8:]:  # Keep last 8 exchanges
+            for entry in self.conversation_history[-4:]:  # Keep last 4 exchanges
                 if entry.get("role") == "user":
-                    history_text += f"<|start_header_id|>user<|end_header_id|>\n\n{entry.get('content', '')}<|eot_id|>\n"
+                    history_text += f"### Instruction:\n{entry.get('content', '')}\n\n"
                 elif entry.get("role") == "assistant":
-                    history_text += f"<|start_header_id|>assistant<|end_header_id|>\n\n{entry.get('content', '')}<|eot_id|>\n"
+                    history_text += f"### Response:\n{entry.get('content', '')}\n\n"
         
-        # Create full prompt (Llama 3 format)
-        full_prompt = f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|>\n{history_text}<|start_header_id|>user<|end_header_id|>\n\n{user_input}<|eot_id|>\n<|start_header_id|>assistant<|end_header_id|>\n\n"
+        # Create full prompt (Alpaca format - works with DeepSeek Coder)
+        full_prompt = f"{history_text}### Instruction:\n{user_input}\n\n### Response:\n"
         
         return full_prompt
         

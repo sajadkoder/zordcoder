@@ -5,13 +5,14 @@ Provides HTTP API for Next.js frontend
 
 Usage:
     python server.py
-    # Runs on http://localhost:8000
+    python server.py --port 8001
+    # Runs on http://localhost:8000 by default
 """
 
 import os
 import sys
 import json
-import asyncio
+import argparse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -23,7 +24,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Simple HTTP server using built-in http.server
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
-import threading
 
 try:
     from llama_cpp import Llama
@@ -152,6 +152,16 @@ class ZordEngine:
             print(f"Error loading model: {e}")
             return False
     
+    def create_system_prompt(self) -> str:
+        """Create system prompt for the model"""
+        return """You are Zord Coder version 1, an advanced AI coding assistant built by SaJad.
+You help with Python, JavaScript, TypeScript, C++, Rust, Go, Java, Bash, and more.
+Provide direct, executable code solutions with brief explanations."""
+    
+    def format_prompt(self, user_input: str) -> str:
+        """Format prompt for DeepSeek Coder model"""
+        return f"### Instruction:\n{user_input}\n\n### Response:\n"
+    
     def generate(self, prompt: str, temperature: float = 0.7, 
                  max_tokens: int = 2048) -> Dict[str, Any]:
         """Generate response"""
@@ -163,11 +173,13 @@ class ZordEngine:
             }
         
         try:
+            formatted_prompt = self.format_prompt(prompt)
+            
             output = self.model(
-                prompt,
+                formatted_prompt,
                 max_tokens=max_tokens,
                 temperature=temperature,
-                stop=["<|endoftext|>", "<|eot_id|>"],
+                stop=["### Instruction:", "### End", "\n\n\n"],
                 echo=False
             )
             
@@ -301,13 +313,29 @@ class ZordHandler(BaseHTTPRequestHandler):
 
 def main():
     """Start the server"""
-    config = ServerConfig()
+    parser = argparse.ArgumentParser(description="Zord Coder API Server")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind to")
+    parser.add_argument("--port", type=int, default=8000, help="Port to listen on")
+    parser.add_argument("--model", type=str, default="models/zordcoder-v1-q4_k_m.gguf", help="Path to model file")
+    parser.add_argument("--ctx", type=int, default=2048, help="Context length")
+    parser.add_argument("--threads", type=int, default=4, help="Number of CPU threads")
+    args = parser.parse_args()
+    
+    config = ServerConfig(
+        host=args.host,
+        port=args.port,
+        model_path=args.model,
+        n_ctx=args.ctx,
+        n_threads=args.threads,
+    )
     
     print("=" * 50)
     print("  Zord Coder API Server")
     print("=" * 50)
     print(f"Host: {config.host}:{config.port}")
     print(f"Model: {config.model_path}")
+    print(f"Context: {config.n_ctx}")
+    print(f"Threads: {config.n_threads}")
     print()
     
     # Try to load model

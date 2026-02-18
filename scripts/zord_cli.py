@@ -21,6 +21,11 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any, Callable
 from datetime import datetime
 
+# Fix encoding for Windows console
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -88,21 +93,20 @@ else:
 # ASCII Art Banner
 #===============================================================================
 
-ZORD_BANNER = """
+ZORD_BANNER = r"""
 [bold cyan]
- ██████╗ ███████╗███████╗██╗     ██╗███╗   ██╗███████╗
-██╔═══██╗██╔════╝██╔════╝██║     ██║████╗  ██║██╔════╝
-██║   ██║█████╗  █████╗  ██║     ██║██╔██╗ ██║█████╗  
-██║   ██║██╔══╝  ██╔══╝  ██║     ██║██║╚██╗██║██╔══╝  
-╚██████╔╝██║     ██║     ███████╗██║██║ ╚████║███████╗
- ╚═════╝ ╚═╝     ╚═╝     ╚══════╝╚═╝╚═╝  ╚═══╝╚══════╝
+   ______  __________  __  __     __  ____  
+  / ____/ / ____/ __ \/ / / /    / / / __ \ 
+ / /     / /   / / / / / / /    / / / / / / 
+/ /___  / /___/ /_/ / /_/ /    / /_/ /_/ /  
+\____/  \____/\____/\____/     \____\____/   
 [bold yellow]version 1.0.0[/bold yellow]
 """
 
 ZORD_BANNER_COMPACT = """
-[bold cyan]╔══════════════════════════════════════════════════╗
-║  ZORD CODER v1 - Ultimate Coding Assistant    ║
-╚══════════════════════════════════════════════════╝[/bold cyan]
+[bold cyan]+--------------------------------------------------+
+|  ZORD CODER v1 - Ultimate Coding Assistant       |
++--------------------------------------------------+[/bold cyan]
 """
 
 
@@ -125,13 +129,23 @@ class ZordConsole:
         if self.use_rich and self.console:
             try:
                 self.console.print(message)
-            except:
-                print(message)
+            except UnicodeEncodeError:
+                import re
+                clean = re.sub(r'\[/?[^\]]+\]', '', message)
+                clean = clean.encode('ascii', 'replace').decode('ascii')
+                print(clean)
+            except Exception:
+                import re
+                clean = re.sub(r'\[/?[^\]]+\]', '', message)
+                print(clean)
         else:
-            # Strip rich markup for plain output
             import re
             clean = re.sub(r'\[/?[^\]]+\]', '', message)
-            print(clean)
+            try:
+                print(clean)
+            except UnicodeEncodeError:
+                clean = clean.encode('ascii', 'replace').decode('ascii')
+                print(clean)
             
     def print_banner(self, compact: bool = False):
         banner = ZORD_BANNER_COMPACT if compact else ZORD_BANNER
