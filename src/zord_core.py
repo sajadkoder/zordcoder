@@ -73,11 +73,32 @@ class GenerationConfig:
     context_overlap: int = 0
 
 
+def get_model_path():
+    """Get the model path, checking multiple possible locations"""
+    # Check environment variable first
+    env_path = os.getenv("ZORD_MODEL_PATH")
+    if env_path and os.path.exists(env_path):
+        return env_path
+    
+    # Check relative to project root
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    relative_path = os.path.join(project_root, "models", "zordcoder-v1-q4_k_m.gguf")
+    if os.path.exists(relative_path):
+        return relative_path
+    
+    # Check current directory
+    if os.path.exists("models/zordcoder-v1-q4_k_m.gguf"):
+        return "models/zordcoder-v1-q4_k_m.gguf"
+    
+    # Return default
+    return relative_path
+
+
 @dataclass
 class ZordConfig:
     """Main configuration for Zord Coder"""
-    # Model
-    model_path: str = field(default_factory=lambda: os.getenv("ZORD_MODEL_PATH", "models/zordcoder-v1-q4_k_m.gguf"))
+    # Model - try multiple paths
+    model_path: str = field(default_factory=get_model_path)
     model_type: str = "llama"
     
     # Context

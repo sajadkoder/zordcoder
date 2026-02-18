@@ -20,15 +20,10 @@ Usage:
 import os
 import sys
 import time
-import json
-import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, List, Any
-from collections import defaultdict
 
 import streamlit as st
-import pandas as pd
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -37,13 +32,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 st.set_page_config(
     page_title="Zord Coder - AI Coding Assistant",
     page_icon="🤖",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="expanded",
-    menu_items={
-        "Get Help": None,
-        "Report a Bug": None,
-        "About": "Zord Coder v1 - Built by SaJad"
-    }
 )
 
 # Try to import Zord Core
@@ -52,22 +42,19 @@ try:
     CORE_AVAILABLE = True
 except ImportError:
     CORE_AVAILABLE = False
+    print("Warning: zord_core not found")
 
 
 #===============================================================================
-# Usage Limits Configuration
+# Usage Limits
 #===============================================================================
 
 class UsageLimiter:
-    """Simple usage limiter based on session/IP"""
-    
     def __init__(self):
-        # Free tier limits
         self.MAX_MESSAGES_PER_DAY = 50
         self.MAX_TOKENS_PER_DAY = 50000
         self.MAX_REQUESTS_PER_MINUTE = 10
         
-        # Initialize session state for usage tracking
         if "usage" not in st.session_state:
             st.session_state.usage = {
                 "messages_today": 0,
@@ -77,11 +64,9 @@ class UsageLimiter:
                 "last_request_time": None
             }
         
-        # Reset daily counters if new day
         self._check_daily_reset()
     
     def _check_daily_reset(self):
-        """Reset counters if it's a new day"""
         today = datetime.now().date()
         if st.session_state.usage["last_reset"] != today:
             st.session_state.usage = {
@@ -92,39 +77,31 @@ class UsageLimiter:
                 "last_request_time": None
             }
     
-    def can_send_message(self) -> tuple[bool, str]:
-        """Check if user can send a message"""
+    def can_send_message(self):
         usage = st.session_state.usage
         
-        # Check daily message limit
         if usage["messages_today"] >= self.MAX_MESSAGES_PER_DAY:
-            return False, f"Daily message limit reached ({self.MAX_MESSAGES_PER_DAY} messages/day). Come back tomorrow!"
+            return False, f"Daily limit reached ({self.MAX_MESSAGES_PER_DAY} messages). Come back tomorrow!"
         
-        # Check daily token limit
         if usage["tokens_today"] >= self.MAX_TOKENS_PER_DAY:
-            return False, f"Daily token limit reached ({self.MAX_TOKENS_PER_DAY} tokens/day). Come back tomorrow!"
+            return False, f"Daily limit reached ({self.MAX_TOKENS_PER_DAY} tokens). Come back tomorrow!"
         
-        # Check rate limit
         current_time = time.time()
         if usage["last_request_time"]:
             time_diff = current_time - usage["last_request_time"]
-            
-            if time_diff < 60:  # Within same minute
+            if time_diff < 60:
                 if usage["requests_this_minute"] >= self.MAX_REQUESTS_PER_MINUTE:
                     return False, "Too many requests. Please wait a minute."
         
         return True, ""
     
     def record_usage(self, tokens: int):
-        """Record usage after a request"""
         usage = st.session_state.usage
         current_time = time.time()
         
-        # Update counters
         usage["messages_today"] += 1
         usage["tokens_today"] += tokens
         
-        # Reset minute counter if needed
         if usage["last_request_time"]:
             time_diff = current_time - usage["last_request_time"]
             if time_diff >= 60:
@@ -133,363 +110,213 @@ class UsageLimiter:
         usage["requests_this_minute"] += 1
         usage["last_request_time"] = current_time
     
-    def get_usage_info(self) -> Dict:
-        """Get current usage information"""
+    def get_usage_info(self):
         usage = st.session_state.usage
         return {
             "messages_used": usage["messages_today"],
             "messages_limit": self.MAX_MESSAGES_PER_DAY,
             "tokens_used": usage["tokens_today"],
             "tokens_limit": self.MAX_TOKENS_PER_DAY,
-            "messages_remaining": self.MAX_MESSAGES_PER_DAY - usage["messages_today"],
-            "tokens_remaining": self.MAX_TOKENS_PER_DAY - usage["tokens_today"]
         }
 
 
-# Create global usage limiter
 usage_limiter = UsageLimiter()
 
 
 #===============================================================================
-# Custom CSS - x.ai Inspired Theme (Enhanced)
+# Custom CSS - Clean & Polished
 #===============================================================================
 
-def load_custom_css():
-    """Load custom CSS for x.ai inspired styling"""
-    
-    # Get theme mode
+def load_css():
     theme = st.session_state.get("theme", "dark")
     
     if theme == "dark":
-        # Dark theme (x.ai inspired)
-        bg_color = "#000000"
-        surface_color = "#0A0A0A"
-        surface_elevated = "#141414"
-        text_color = "#FFFFFF"
-        text_secondary = "#9CA3AF"
-        text_muted = "#6B7280"
-        accent_color = "#10B981"  # Green
+        bg = "#000000"
+        surface = "#0A0A0A"
+        surface_hover = "#171717"
+        text = "#FFFFFF"
+        text_secondary = "#A3A3A3"
+        accent = "#10B981"
         accent_hover = "#059669"
-        accent_subtle = "#064E3B"
-        border_color = "#1F1F1F"
-        code_bg = "#111111"
-        success_color = "#10B981"
-        warning_color = "#F59E0B"
-        error_color = "#EF4444"
+        accent_light = "#34D399"
+        border = "#262626"
     else:
-        # Light theme
-        bg_color = "#FFFFFF"
-        surface_color = "#F9FAFB"
-        surface_elevated = "#FFFFFF"
-        text_color = "#111827"
-        text_secondary = "#6B7280"
-        text_muted = "#9CA3AF"
-        accent_color = "#059669"
+        bg = "#FAFAFA"
+        surface = "#FFFFFF"
+        surface_hover = "#F5F5F5"
+        text = "#171717"
+        text_secondary = "#737373"
+        accent = "#059669"
         accent_hover = "#047857"
-        accent_subtle = "#D1FAE5"
-        border_color = "#E5E7EB"
-        code_bg = "#F3F4F6"
-        success_color = "#059669"
-        warning_color = "#D97706"
-        error_color = "#DC2626"
-    
-    custom_css = f"""
+        accent_light = "#10B981"
+        border = "#E5E5E5"
+
+    css = f"""
     <style>
-    /* Main background */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    * {{
+        font-family: 'Inter', sans-serif !important;
+    }}
+    
     .stApp {{
-        background-color: {bg_color};
-        color: {text_color};
+        background: {bg};
+        color: {text};
     }}
     
-    /* Hide Streamlit branding */
-    #MainMenu {{visibility: hidden;}}
-    footer {{visibility: hidden;}}
-    .stDeployButton {{display: none;}}
-    
-    /* Sidebar */
-    [data-testid="stSidebar"] {{
-        background-color: {surface_color};
-        border-right: 1px solid {border_color};
+    /* Hide elements */
+    #MainMenu, footer, .stDeployButton {{
+        display: none !important;
     }}
     
-    [data-testid="stSidebar"] > div {{
-        padding-top: 1rem;
-    }}
-    
-    /* Chat container */
-    .chat-container {{
+    /* Main container */
+    .main-content {{
         max-width: 800px;
         margin: 0 auto;
         padding: 1rem;
     }}
     
-    /* Chat messages - Enhanced */
+    /* Title */
+    .title-wrapper {{
+        text-align: center;
+        padding: 2rem 0 1rem;
+    }}
+    
+    .main-title {{
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, {accent} 0%, {accent_light} 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0;
+    }}
+    
+    .main-subtitle {{
+        color: {text_secondary};
+        font-size: 1rem;
+        margin-top: 0.5rem;
+    }}
+    
+    /* Chat messages */
     [data-testid="stChatMessage"] {{
-        background-color: {surface_color};
-        border-radius: 12px;
+        background: {surface};
+        border: 1px solid {border};
+        border-radius: 16px;
         padding: 1rem 1.25rem;
-        margin: 0.75rem 0;
-        border: 1px solid {border_color};
+        margin: 0.5rem 0;
     }}
     
-    [data-testid="stChatMessageContent"] {{
-        padding: 0;
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatar-avatar-user"]) {{
+        background: {surface_hover};
+        border-color: {accent};
     }}
     
-    /* User message */
-    [data-testid="stChatMessage"]:has(div[data-testid="chatAvatar-avatar-user"]) {{
-        background-color: {accent_subtle};
-        border-color: {accent_color};
-    }}
-    
-    /* Assistant message */
-    [data-testid="stChatMessage"]:has(div[data-testid="chatAvatar-avatar-assistant"]) {{
-        background-color: {surface_elevated};
-    }}
-    
-    /* Avatar */
+    /* Avatars */
     [data-testid="chatAvatar-avatar-user"] {{
-        background-color: {accent_color} !important;
+        background: {accent} !important;
     }}
     
     [data-testid="chatAvatar-avatar-assistant"] {{
-        background-color: {surface_elevated} !important;
-        border: 2px solid {accent_color};
+        background: {surface} !important;
+        border: 2px solid {accent} !important;
     }}
     
-    /* Input field */
+    /* Chat input */
     [data-testid="stChatInput"] {{
-        background-color: {surface_color};
-        border: 1px solid {border_color};
-        border-radius: 12px;
+        background: {surface};
+        border: 2px solid {border};
+        border-radius: 16px;
         padding: 0.75rem 1rem;
     }}
     
     [data-testid="stChatInput"]:focus-within {{
-        border-color: {accent_color};
-        box-shadow: 0 0 0 3px {accent_subtle};
-    }}
-    
-    [data-testid="stChatInput"] input {{
-        color: {text_color};
-    }}
-    
-    [data-testid="stChatInput"] textarea {{
-        color: {text_color} !important;
+        border-color: {accent};
+        box-shadow: 0 0 0 3px {accent}20;
     }}
     
     /* Buttons */
     .stButton > button {{
-        background-color: {accent_color};
+        background: {accent};
         color: white;
-        border-radius: 8px;
         border: none;
-        padding: 0.5rem 1rem;
-        font-weight: 500;
+        border-radius: 12px;
+        padding: 0.625rem 1.25rem;
+        font-weight: 600;
         transition: all 0.2s;
     }}
     
     .stButton > button:hover {{
-        background-color: {accent_hover};
+        background: {accent_hover};
         transform: translateY(-1px);
     }}
     
-    .stButton > button:active {{
-        transform: translateY(0);
+    /* Sidebar */
+    [data-testid="stSidebar"] {{
+        background: {surface};
+        border-right: 1px solid {border};
     }}
     
-    /* Secondary buttons */
-    .stButton.secondary > button {{
-        background-color: transparent;
-        border: 1px solid {border_color};
-        color: {text_color};
+    /* Sidebar sections */
+    .sidebar-section {{
+        padding: 1rem 0;
+        border-bottom: 1px solid {border};
     }}
     
-    .stButton.secondary > button:hover {{
-        background-color: {surface_elevated};
-        border-color: {accent_color};
+    .sidebar-title {{
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: {text_secondary};
+        margin-bottom: 0.75rem;
     }}
     
-    /* Headers */
-    h1, h2, h3, h4, h5, h6 {{
-        color: {text_color} !important;
-        font-weight: 600 !important;
-    }}
-    
-    /* Dividers */
-    hr {{
-        border-color: {border_color};
-        margin: 1.5rem 0;
-    }}
-    
-    /* Sliders */
-    .stSlider [data-baseweb="slider"] {{
-        background-color: {border_color};
-    }}
-    
-    .stSlider [data-baseweb="slider"] div[role="slider"] {{
-        background-color: {accent_color};
-        border-color: {accent_color};
-    }}
-    
-    /* Toggles */
-    [data-testid="stToggleSwitch"] {{
-        background-color: {border_color};
-    }}
-    
-    [data-testid="stToggleSwitch"][aria-checked="true"] {{
-        background-color: {accent_color};
+    /* Progress bars */
+    .stProgress > div > div > div {{
+        background: {accent};
     }}
     
     /* Metrics */
     [data-testid="stMetric"] {{
-        background-color: {surface_elevated};
-        border: 1px solid {border_color};
-        border-radius: 8px;
+        background: {surface};
+        border: 1px solid {border};
+        border-radius: 12px;
         padding: 1rem;
     }}
     
-    [data-testid="stMetricLabel"] {{
-        color: {text_secondary};
-    }}
-    
-    [data-testid="stMetricValue"] {{
-        color: {accent_color};
-    }}
-    
-    /* Progress bar */
-    .stProgress > div > div > div {{
-        background-color: {accent_color};
-    }}
-    
-    /* Spinner */
-    .stSpinner {{
-        color: {accent_color};
-    }}
-    
-    /* Code blocks - Enhanced */
-    pre {{
-        background-color: {code_bg} !important;
-        border-radius: 8px;
-        padding: 1rem;
-        border: 1px solid {border_color};
-        overflow-x: auto;
-    }}
-    
-    code {{
-        background-color: {code_bg};
-        color: {accent_color};
-        padding: 0.2rem 0.4rem;
-        border-radius: 4px;
-        font-family: 'JetBrains Mono', 'Fira Code', monospace;
-        font-size: 0.9em;
-    }}
-    
-    pre code {{
-        background-color: transparent;
-        padding: 0;
-        color: inherit;
-    }}
-    
-    /* Scrollbar */
-    ::-webkit-scrollbar {{
-        width: 8px;
-        height: 8px;
-    }}
-    
-    ::-webkit-scrollbar-track {{
-        background: {surface_color};
-    }}
-    
-    ::-webkit-scrollbar-thumb {{
-        background: {border_color};
-        border-radius: 4px;
-    }}
-    
-    ::-webkit-scrollbar-thumb:hover {{
-        background: {text_muted};
-    }}
-    
-    /* Markdown content */
-    .stMarkdown p {{
-        color: {text_color};
-        line-height: 1.6;
-    }}
-    
-    .stMarkdown a {{
-        color: {accent_color};
-    }}
-    
-    .stMarkdown a:hover {{
-        color: {accent_hover};
-    }}
-    
-    /* Info/Warning/Error boxes */
-    [data-testid="stAlert"] {{
-        border-radius: 8px;
-        padding: 1rem;
-    }}
-    
-    /* Custom title styling */
-    .main-title {{
-        font-size: 2.5rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, {accent_color}, #34D399);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+    /* Welcome card */
+    .welcome-card {{
+        background: {surface};
+        border: 1px solid {border};
+        border-radius: 20px;
+        padding: 2.5rem;
         text-align: center;
-        margin-bottom: 0.5rem;
-    }}
-    
-    .main-subtitle {{
-        font-size: 1.1rem;
-        color: {text_secondary};
-        text-align: center;
-        margin-bottom: 2rem;
-    }}
-    
-    /* Usage bar */
-    .usage-bar {{
-        background-color: {surface_elevated};
-        border-radius: 8px;
-        padding: 1rem;
         margin: 1rem 0;
     }}
     
-    .usage-label {{
-        color: {text_secondary};
-        font-size: 0.875rem;
+    .welcome-card h2 {{
+        color: {text};
         margin-bottom: 0.5rem;
     }}
     
-    .usage-progress {{
-        height: 8px;
-        background-color: {border_color};
-        border-radius: 4px;
-        overflow: hidden;
+    .welcome-card p {{
+        color: {text_secondary};
     }}
     
-    .usage-progress-fill {{
-        height: 100%;
-        background-color: {accent_color};
-        border-radius: 4px;
-        transition: width 0.3s ease;
-    }}
-    
-    /* Quick action buttons */
+    /* Quick actions */
     .quick-actions {{
         display: flex;
         flex-wrap: wrap;
         gap: 0.5rem;
         justify-content: center;
-        margin: 1rem 0;
+        margin-top: 1.5rem;
     }}
     
-    .quick-action-btn {{
-        background-color: {surface_elevated};
-        border: 1px solid {border_color};
-        border-radius: 20px;
+    .quick-btn {{
+        background: {surface};
+        border: 1px solid {border};
+        border-radius: 999px;
         padding: 0.5rem 1rem;
         color: {text_secondary};
         font-size: 0.875rem;
@@ -497,420 +324,370 @@ def load_custom_css():
         transition: all 0.2s;
     }}
     
-    .quick-action-btn:hover {{
-        border-color: {accent_color};
-        color: {accent_color};
+    .quick-btn:hover {{
+        border-color: {accent};
+        color: {accent};
     }}
     
-    /* Welcome card */
-    .welcome-card {{
-        background-color: {surface_elevated};
-        border: 1px solid {border_color};
-        border-radius: 16px;
-        padding: 2rem;
-        text-align: center;
-        margin: 2rem 0;
+    /* Divider */
+    hr {{
+        border-color: {border};
+        margin: 1.5rem 0;
     }}
     
-    /* Status badge */
+    /* Scrollbar */
+    ::-webkit-scrollbar {{
+        width: 6px;
+    }}
+    
+    ::-webkit-scrollbar-track {{
+        background: transparent;
+    }}
+    
+    ::-webkit-scrollbar-thumb {{
+        background: {border};
+        border-radius: 3px;
+    }}
+    
+    /* Streamlit overrides */
+    .stTextInput > div > div {{
+        background: {surface};
+    }}
+    
+    .stRadio > div {{
+        gap: 0.5rem;
+    }}
+    
+    .stRadio > div > label {{
+        background: {surface};
+        border: 1px solid {border};
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }}
+    
+    .stRadio > div > label:hover {{
+        border-color: {accent};
+    }}
+    
+    .stRadio > div > label:has(input:checked) {{
+        background: {accent};
+        border-color: {accent};
+        color: white;
+    }}
+    
+    .stToggle {{
+        background: {surface};
+        border: 1px solid {border};
+        border-radius: 12px;
+        padding: 1rem;
+    }}
+    
+    /* Model status */
     .status-badge {{
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
         font-size: 0.875rem;
         font-weight: 500;
     }}
     
-    .status-badge.ready {{
-        background-color: {accent_subtle};
-        color: {accent_color};
+    .status-ready {{
+        background: {accent}20;
+        color: {accent};
     }}
     
-    .status-badge.warning {{
-        background-color: #FEF3C7;
-        color: {warning_color};
+    .status-error {{
+        background: #EF444420;
+        color: #EF4444;
     }}
     
-    /* Animations */
-    @keyframes fadeIn {{
-        from {{ opacity: 0; transform: translateY(10px); }}
-        to {{ opacity: 1; transform: translateY(0); }}
-    }}
-    
-    .animate-in {{
-        animation: fadeIn 0.3s ease-out;
-    }}
-    
-    /* Hide elements */
-    .hidden {{
-        display: none;
+    /* Usage text */
+    .usage-text {{
+        font-size: 0.875rem;
+        color: {text_secondary};
+        text-align: center;
     }}
     </style>
     """
     
-    st.markdown(custom_css, unsafe_allow_html=True)
+    st.markdown(css, unsafe_allow_html=True)
 
 
 #===============================================================================
-# Session State Management
+# Session State
 #===============================================================================
 
-def init_session_state():
-    """Initialize session state variables"""
+def init_state():
+    defaults = {
+        "messages": [],
+        "engine": None,
+        "config": None,
+        "theme": "dark",
+        "model_loaded": False,
+        "model_loading": False,
+        "reasoning_mode": False,
+        "temperature": 0.1,
+        "max_tokens": 2048,
+    }
     
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    
-    if "engine" not in st.session_state:
-        st.session_state.engine = None
-    
-    if "config" not in st.session_state:
-        st.session_state.config = None
-    
-    if "theme" not in st.session_state:
-        st.session_state.theme = "dark"
-    
-    if "model_loaded" not in st.session_state:
-        st.session_state.model_loaded = False
-    
-    if "reasoning_mode" not in st.session_state:
-        st.session_state.reasoning_mode = False
-    
-    if "temperature" not in st.session_state:
-        st.session_state.temperature = 0.1
-    
-    if "max_tokens" not in st.session_state:
-        st.session_state.max_tokens = 2048
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
 
 #===============================================================================
-# Model Management
+# Model Loading
 #===============================================================================
 
 @st.cache_resource
-def load_zord_engine():
-    """Load Zord Coder engine (cached)"""
-    
+def get_engine():
+    """Get or create the engine"""
+    return load_engine()
+
+
+def load_engine():
+    """Load the model engine"""
     if not CORE_AVAILABLE:
-        return None, None
+        return None
     
     try:
-        # Get model path
-        model_path = os.getenv("ZORD_MODEL_PATH", "models/zordcoder-v1-q4_k_m.gguf")
+        # Try multiple possible model paths
+        possible_paths = [
+            "models/zordcoder-v1-q4_k_m.gguf",
+            os.path.join(os.path.dirname(__file__), "models", "zordcoder-v1-q4_k_m.gguf"),
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), "models", "zordcoder-v1-q4_k_m.gguf"),
+            os.getenv("ZORD_MODEL_PATH", ""),
+        ]
         
-        # Check if model exists
-        if not os.path.exists(model_path):
-            return None, None
+        # Filter empty paths
+        possible_paths = [p for p in possible_paths if p]
         
-        # Create config
+        model_path = None
+        for path in possible_paths:
+            if path and os.path.exists(path):
+                model_path = path
+                break
+        
+        if not model_path:
+            return None
+        
         config = ZordConfig(
             model_path=model_path,
             n_ctx=2048,
             n_threads=4,
             n_gpu_layers=0,
+            verbose=False,
         )
         
-        # Create engine
         engine = ZordCore(config)
         
-        # Load model
         if engine.load_model():
-            return engine, config
-        else:
-            return None, None
-            
+            return engine
+        
+        return None
+        
     except Exception as e:
-        return None, None
+        print(f"Error loading model: {e}")
+        return None
 
 
 #===============================================================================
 # UI Components
 #===============================================================================
 
-def render_header():
-    """Render the header with logo and title"""
-    
-    st.markdown("""
-    <div class="main-title">🤖 Zord Coder</div>
-    <div class="main-subtitle">AI Coding Assistant by SaJad</div>
-    """, unsafe_allow_html=True)
-
-
 def render_sidebar():
-    """Render the sidebar with settings"""
-    
     with st.sidebar:
-        st.title("⚙️ Settings")
+        st.markdown('<div class="sidebar-title">⚙️ Settings</div>', unsafe_allow_html=True)
         
-        # Theme toggle
-        st.subheader("🎨 Appearance")
-        theme = st.radio(
-            "Theme",
-            ["dark", "light"],
-            index=0 if st.session_state.theme == "dark" else 1,
-            horizontal=True,
-            label_visibility="collapsed"
-        )
+        # Theme
+        theme = st.radio("Theme", ["dark", "light"], 
+                        index=0 if st.session_state.theme == "dark" else 1,
+                        horizontal=True, label_visibility="collapsed")
         if theme != st.session_state.theme:
             st.session_state.theme = theme
             st.rerun()
         
-        st.divider()
+        st.markdown('<hr style="margin: 1rem 0;">', unsafe_allow_html=True)
+        st.markdown('<div class="sidebar-title">⚡ Generation</div>', unsafe_allow_html=True)
         
-        # Generation settings
-        st.subheader("⚡ Generation")
+        st.session_state.temperature = st.slider("Temperature", 0.0, 2.0, st.session_state.temperature, 0.1)
+        st.session_state.max_tokens = st.slider("Max Tokens", 256, 4096, st.session_state.max_tokens, 256)
+        st.session_state.reasoning_mode = st.toggle("🧠 Reasoning Mode", st.session_state.reasoning_mode)
         
-        st.session_state.temperature = st.slider(
-            "Temperature",
-            min_value=0.0,
-            max_value=2.0,
-            value=st.session_state.temperature,
-            step=0.1,
-            help="Higher values make output more random"
-        )
+        st.markdown('<hr style="margin: 1rem 0;">', unsafe_allow_html=True)
         
-        st.session_state.max_tokens = st.slider(
-            "Max Tokens",
-            min_value=256,
-            max_value=4096,
-            value=st.session_state.max_tokens,
-            step=256,
-            help="Maximum tokens to generate"
-        )
+        # Usage
+        st.markdown('<div class="sidebar-title">📊 Today\'s Usage</div>', unsafe_allow_html=True)
         
-        st.session_state.reasoning_mode = st.toggle(
-            "🧠 Reasoning Mode",
-            value=st.session_state.reasoning_mode,
-            help="Enable chain-of-thought reasoning"
-        )
+        usage = usage_limiter.get_usage_info()
         
-        st.divider()
-        
-        # Usage info
-        st.subheader("📊 Today's Usage")
-        
-        usage_info = usage_limiter.get_usage_info()
-        
-        # Messages bar
         st.caption("Messages")
-        messages_percent = (usage_info["messages_used"] / usage_info["messages_limit"]) * 100
-        st.progress(min(messages_percent, 100))
-        st.caption(f"{usage_info['messages_used']} / {usage_info['messages_limit']} messages")
+        st.progress(usage["messages_used"] / usage["messages_limit"])
+        st.caption(f"{usage['messages_used']} / {usage['messages_limit']}")
         
-        # Tokens bar
         st.caption("Tokens")
-        tokens_percent = (usage_info["tokens_used"] / usage_info["tokens_limit"]) * 100
-        st.progress(min(tokens_percent, 100))
-        st.caption(f"{usage_info['tokens_used']:,} / {usage_info['tokens_limit']:,} tokens")
+        st.progress(usage["tokens_used"] / usage["tokens_limit"])
+        st.caption(f"{usage['tokens_used']:,} / {usage['tokens_limit']:,}")
         
-        st.divider()
+        st.markdown('<hr style="margin: 1rem 0;">', unsafe_allow_html=True)
         
         # Model status
-        st.subheader("🤖 Model Status")
+        st.markdown('<div class="sidebar-title">🤖 Model</div>', unsafe_allow_html=True)
         
         if st.session_state.model_loaded:
-            st.success("✅ Model Loaded")
+            st.markdown('<span class="status-badge status-ready">✓ Loaded</span>', unsafe_allow_html=True)
         else:
-            st.warning("⚠️ Model Not Loaded")
+            st.markdown('<span class="status-badge status-error">○ Not Loaded</span>', unsafe_allow_html=True)
+            
             if st.button("📥 Load Model", use_container_width=True):
                 with st.spinner("Loading model..."):
-                    engine, config = load_zord_engine()
+                    st.session_state.model_loading = True
+                    engine = get_engine()
                     if engine:
                         st.session_state.engine = engine
-                        st.session_state.config = config
                         st.session_state.model_loaded = True
-                        st.success("Model loaded!")
+                        st.session_state.model_loading = False
                         st.rerun()
                     else:
-                        st.error("Failed to load model")
+                        st.session_state.model_loading = False
+                        st.error("Failed to load model. Make sure model file exists in models/ folder.")
         
-        st.divider()
+        st.markdown('<hr style="margin: 1rem 0;">', unsafe_allow_html=True)
         
-        # Clear chat
         if st.button("🗑️ Clear Chat", use_container_width=True):
             st.session_state.messages = []
             st.rerun()
 
 
-def render_usage_limit_message():
-    """Render usage limit exceeded message"""
-    st.markdown("""
-    <div class="welcome-card">
-        <h2>🚫 Daily Limit Reached</h2>
-        <p style="color: #9CA3AF; margin-top: 1rem;">
-            You've reached your daily usage limit.<br>
-            Come back tomorrow for more free generations!
-        </p>
+def render_header():
+    st.markdown(f"""
+    <div class="title-wrapper">
+        <h1 class="main-title">🤖 Zord Coder</h1>
+        <p class="main-subtitle">AI Coding Assistant by SaJad</p>
     </div>
     """, unsafe_allow_html=True)
 
 
 def render_welcome():
-    """Render welcome message with quick actions"""
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    
-    with col2:
-        st.markdown("""
-        <div class="welcome-card animate-in">
-            <h2>👋 Welcome to Zord Coder!</h2>
-            <p style="color: #9CA3AF; margin-top: 0.5rem;">
-                Your AI coding assistant is ready to help.<br>
-                Start by typing a message below!
-            </p>
+    st.markdown(f"""
+    <div class="welcome-card">
+        <h2>👋 Welcome!</h2>
+        <p>Your AI coding assistant is ready. Start chatting below!</p>
+        
+        <div class="quick-actions">
+            <a href="#" class="quick-btn" onclick="document.querySelector('[data-testid=stChatInput]').focus()">💬 Start Chatting</a>
         </div>
-        """, unsafe_allow_html=True)
-        
-        # Quick action buttons
-        st.markdown('<div class="quick-actions">', unsafe_allow_html=True)
-        
-        col_a, col_b, col_c, col_d = st.columns(4)
-        
-        with col_a:
-            if st.button("📝 Python", key="quick_python", use_container_width=True):
-                handle_quick_prompt("Write a Python function to calculate factorial")
-        
-        with col_b:
-            if st.button("🐛 Debug", key="quick_debug", use_container_width=True):
-                handle_quick_prompt("Help me debug this JavaScript code")
-        
-        with col_c:
-            if st.button("❓ Explain", key="quick_explain", use_container_width=True):
-                handle_quick_prompt("Explain what is recursion in programming")
-        
-        with col_d:
-            if st.button("🔧 Best Practices", key="quick_best", use_container_width=True):
-                handle_quick_prompt("What are Python best practices?")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
 
-def handle_quick_prompt(prompt: str):
-    """Handle quick prompt button click"""
-    
-    # Check usage limits
-    can_send, error_msg = usage_limiter.can_send_message()
+def handle_quick_action(prompt):
+    can_send, error = usage_limiter.can_send_message()
     if not can_send:
-        st.error(error_msg)
+        st.error(error)
         return
     
-    # Add user message
-    st.session_state.messages.append({
-        "role": "user",
-        "content": prompt
-    })
+    st.session_state.messages.append({"role": "user", "content": prompt})
     
-    # Generate response
-    response = generate_response(prompt)
-    
-    # Record usage
-    usage_limiter.record_usage(len(response.split()))
-    
-    # Add to messages
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": response
-    })
+    if st.session_state.engine and st.session_state.model_loaded:
+        full_prompt = f"Let me think through this step by step:\n\n{prompt}" if st.session_state.reasoning_mode else prompt
+        
+        config = GenerationConfig(
+            temperature=st.session_state.temperature,
+            max_tokens=st.session_state.max_tokens,
+            repeat_penalty=1.1,
+            stream=False,
+        )
+        
+        try:
+            response, metrics = st.session_state.engine.generate_response(full_prompt, config)
+            usage_limiter.record_usage(metrics.get("tokens_generated", 0))
+            st.session_state.messages.append({"role": "assistant", "content": response})
+        except Exception as e:
+            st.session_state.messages.append({"role": "assistant", "content": f"Error: {str(e)}"})
+    else:
+        st.session_state.messages.append({"role": "assistant", "content": "⚠️ Model not loaded. Please load the model first."})
     
     st.rerun()
 
 
-def generate_response(prompt: str) -> str:
-    """Generate response from Zord Coder"""
-    
-    if not st.session_state.engine:
-        return "⚠️ Model not loaded. Please wait for the model to load or reload the page."
-    
-    # Prepare prompt with reasoning mode
-    if st.session_state.reasoning_mode:
-        prompt = f"Let me think through this step by step:\n\n{prompt}"
-    
-    # Create generation config
-    gen_config = GenerationConfig(
-        temperature=st.session_state.temperature,
-        max_tokens=st.session_state.max_tokens,
-        repeat_penalty=1.1,
-        stream=False,
-    )
-    
-    try:
-        # Generate response
-        response, metrics = st.session_state.engine.generate_response(prompt, gen_config)
-        return response
-        
-    except Exception as e:
-        return f"❌ Error: {str(e)}"
-
-
-def render_chat():
-    """Render the chat interface"""
-    
-    # Display messages
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-
+#===============================================================================
+# Main App
+#===============================================================================
 
 def main():
-    """Main application entry point"""
+    init_state()
+    load_css()
     
-    # Initialize session state
-    init_session_state()
+    # Try to load model
+    if CORE_AVAILABLE and not st.session_state.model_loaded and not st.session_state.model_loading:
+        with st.spinner("Loading model..."):
+            engine = get_engine()
+            if engine:
+                st.session_state.engine = engine
+                st.session_state.model_loaded = True
     
-    # Load custom CSS
-    load_custom_css()
-    
-    # Try to load model silently
-    if CORE_AVAILABLE and not st.session_state.model_loaded:
-        engine, config = load_zord_engine()
-        if engine:
-            st.session_state.engine = engine
-            st.session_state.config = config
-            st.session_state.model_loaded = True
-    
-    # Render sidebar
     render_sidebar()
-    
-    # Render header
     render_header()
     
-    # Check usage limits for new messages
+    # Quick actions
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        if st.button("📝 Python", use_container_width=True):
+            handle_quick_action("Write a Python function to calculate factorial")
+    with col2:
+        if st.button("🐛 Debug", use_container_width=True):
+            handle_quick_action("Help me debug this code")
+    with col3:
+        if st.button("❓ Explain", use_container_width=True):
+            handle_quick_action("Explain recursion")
+    with col4:
+        if st.button("🔧 Best Practices", use_container_width=True):
+            handle_quick_action("Python best practices")
+    
+    st.markdown("---")
+    
+    # Chat
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+    
+    # Input
     can_send, error_msg = usage_limiter.can_send_message()
     
-    # Chat input (disabled if limit reached)
     if prompt := st.chat_input(
         "Ask Zord Coder anything..." if can_send else error_msg,
         disabled=not can_send
     ):
         # Add user message
-        st.session_state.messages.append({
-            "role": "user",
-            "content": prompt
-        })
+        st.session_state.messages.append({"role": "user", "content": prompt})
         
         # Generate response
-        response = generate_response(prompt)
-        
-        # Record usage
-        usage_limiter.record_usage(len(response.split()))
-        
-        # Add assistant response
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": response
-        })
+        if st.session_state.engine and st.session_state.model_loaded:
+            full_prompt = f"Let me think through this step by step:\n\n{prompt}" if st.session_state.reasoning_mode else prompt
+            
+            config = GenerationConfig(
+                temperature=st.session_state.temperature,
+                max_tokens=st.session_state.max_tokens,
+                repeat_penalty=1.1,
+                stream=False,
+            )
+            
+            try:
+                response, metrics = st.session_state.engine.generate_response(full_prompt, config)
+                usage_limiter.record_usage(metrics.get("tokens_generated", 0))
+                st.session_state.messages.append({"role": "assistant", "content": response})
+            except Exception as e:
+                st.session_state.messages.append({"role": "assistant", "content": f"Error: {str(e)}"})
+        else:
+            st.session_state.messages.append({"role": "assistant", "content": "⚠️ Model not loaded. Please load the model from the sidebar."})
         
         st.rerun()
-    
-    # Show messages or welcome
-    if st.session_state.messages:
-        render_chat()
-    else:
-        render_welcome()
 
 
-# Entry point
 if __name__ == "__main__":
     main()
