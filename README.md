@@ -12,7 +12,7 @@
 ## Features
 
 - 🚀 **Blazing Fast** - Optimized GGUF quantization for mobile devices
-- 🌐 **Web Interface** - Beautiful Streamlit web UI (self-hosted)
+- 🌐 **Web Interface** - Beautiful Next.js web UI (self-hosted)
 - 💻 **CLI** - Terminal interface for developers
 - 🌐 **Multi-Language** - Python, JavaScript, TypeScript, C++, Rust, Go, Java, Bash, and more
 - 💬 **Interactive Chat** - Beautiful chat interface with code highlighting
@@ -20,6 +20,35 @@
 - 🧠 **Reasoning Mode** - Chain-of-thought like DeepSeek-R1
 - 📱 **Termux Ready** - Optimized for Android devices
 - 🎨 **x.ai Theme** - Beautiful dark/light themes
+
+## Choose Your Interface
+
+### Option 1: Next.js Web (Recommended)
+Modern, professional web UI with React + Next.js
+
+```bash
+cd web
+npm install
+npm run dev
+```
+Visit: http://localhost:3000
+
+### Option 2: Streamlit Web
+Simple Python-based web UI
+
+```bash
+pip install -r requirements_web.txt
+streamlit run web_app.py
+```
+Visit: http://localhost:8501
+
+### Option 3: Terminal (CLI)
+For developers who prefer command line
+
+```bash
+pip install -r requirements.txt
+python scripts/zord_cli.py --interactive
+```
 
 ## Quick Start
 
