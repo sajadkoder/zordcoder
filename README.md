@@ -58,7 +58,8 @@ The web app will open at `http://localhost:8501`
 - 💬 **Chat History** - Persistent conversation
 - ⚡ **Streaming** - Real-time responses
 - ⚙️ **Settings** - Temperature, max tokens, reasoning mode
-- 📊 **Metrics** - Tokens/sec, response time
+- 📊 **Usage Limits** - 50 messages/day, 50K tokens/day (free tier)
+- 🚫 **No Auth Required** - Anyone can use
 
 ### Making It Public
 
